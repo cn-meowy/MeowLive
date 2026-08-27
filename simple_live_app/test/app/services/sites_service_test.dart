@@ -30,6 +30,11 @@ class _UrlCapturingFake implements LiveApiService {
         {'id': 'b2_site', 'name': 'B2'},
       ];
     }
+    if (baseUrl.contains('c.local')) {
+      return const [
+        {'id': 'c_site', 'name': 'C', 'logo': '/api/v1/plugins/assets/c_site/mini_live_card_c_site.png'},
+      ];
+    }
     return const [
       {'id': 'a_site', 'name': 'A'},
     ];
@@ -136,5 +141,29 @@ void main() {
     await service.fetchRemoteSites();
     expect(await _siteIds(service), ['b_site', 'b2_site'],
         reason: 'reset 后应使用当前 serverUrl 新建的实例');
+  });
+
+  test('后端返回 logo 时 Site.logo 使用后端值；未返回时回退默认', () async {
+    LiveApiFactory.overrideCreateInstance(
+      () async => _UrlCapturingFake(settings.serverUrl.value),
+    );
+
+    // 后端返回 logo：Site.logo 应与后端一致
+    settings.serverUrl.value = 'http://c.local';
+    await LiveApiFactory.reset();
+    await service.fetchRemoteSites();
+    final cLogo = service.remoteSites.single.logo;
+    expect(
+      cLogo,
+      '/api/v1/plugins/assets/c_site/mini_live_card_c_site.png',
+      reason: '应优先使用后端返回的 logo 字段',
+    );
+
+    // 后端未返回 logo：回退本地默认图标
+    settings.serverUrl.value = 'http://a.local';
+    await LiveApiFactory.reset();
+    await service.fetchRemoteSites();
+    expect(service.remoteSites.single.logo, 'assets/images/logo.png',
+        reason: '未知站点未带 logo 时应回退默认图标');
   });
 }

@@ -7,8 +7,8 @@ import 'package:simple_live_app/core/simple_live_core.dart';
 abstract class LiveApiService {
   /// 获取站点列表
   ///
-  /// 返回后端 `/api/v1/sites` 的结果（每项含 `id`、`name`，可选 `account` 描述符），
-  /// 供首页/分类/搜索 Tab 渲染与账号管理。
+  /// 返回后端 `/api/v1/sites` 的结果（每项含 `id`、`name`，可选 `logo` 与
+  /// `account` 描述符），供首页/分类/搜索 Tab 渲染与账号管理。
   Future<List<Map<String, dynamic>>> getSites();
 
   /// 获取分类列表

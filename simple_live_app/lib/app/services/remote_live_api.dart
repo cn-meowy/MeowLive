@@ -31,6 +31,9 @@ class RemoteLiveApi implements LiveApiService {
       return <String, dynamic>{
         'id': m['id']?.toString() ?? '',
         'name': m['name']?.toString() ?? '',
+        // 透传后端返回的站点图标 URL/路径（可为空，sites_service 缺省回退本地）
+        if (m['logo'] != null && m['logo'].toString().trim().isNotEmpty)
+          'logo': m['logo'].toString(),
         // 同时透传 account 描述符（sites_service 会解析为 SiteAccountDescriptor）
         if (m['account'] != null) 'account': m['account'],
       };

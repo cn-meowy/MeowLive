@@ -89,6 +89,9 @@ void main() {
       expect(bili['account']['type'], 'qr');
       expect(bili['account']['label'], '扫码登录');
 
+      // 站点应返回 logo（内嵌服务返回本地 assets 路径，客户端据此渲染）
+      expect(bili['logo'], 'assets/images/bilibili_2.png');
+
       // douyin -> cookie
       expect(byId.containsKey('douyin'), isTrue);
       final dy = byId['douyin']!;

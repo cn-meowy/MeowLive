@@ -233,7 +233,12 @@ class EmbeddedLiveServer {
       final sites = Sites.allSites.values
           .where((s) => s.id != Constant.kLocal) // 本地服务不暴露"本地"虚拟平台
           .map((s) {
-            final entry = <String, dynamic>{'id': s.id, 'name': s.name};
+            final entry = <String, dynamic>{
+              'id': s.id,
+              'name': s.name,
+              // 内嵌服务的站点均为本地已知站点，logo 指向本地 assets（客户端据此渲染或兜底）
+              'logo': s.logo,
+            };
             final account = _getAccountDescriptor(s.id);
             if (account != null) entry['account'] = account;
             return entry;
