@@ -9,6 +9,7 @@
  */
 
 import { describe, it, before, after } from 'node:test';
+// @ts-ignore
 import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import * as fs from 'node:fs/promises';
