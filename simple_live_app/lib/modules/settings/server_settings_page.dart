@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
@@ -51,18 +50,17 @@ class _ServerSettingsPageState extends State<ServerSettingsPage> {
     super.dispose();
   }
 
-  /// 输入框失焦时：地址变更则持久化、重置 API 实例
+  /// 输入框失焦时：地址变更则持久化。
   ///
-  /// 站点列表的重新拉取由 AppSettingsController 中 ever(serverUrl) 监听器
-  /// 在 setServerUrl() 触发时统一处理，避免与本方法双重调用。
+  /// 站点列表的重新拉取由 AppSettingsController 中 ever(serverUrl) 监听器在
+  /// setServerUrl() 触发时统一处理（该监听器会先 LiveApiFactory.reset() 再
+  /// fetchRemoteSites，避免命中旧地址缓存的实例），避免与本方法双重触发。
   void _onUrlFocusChanged() {
     if (_urlFocusNode.hasFocus) return;
     final value = _normalizeUrl(_urlController.text);
     if (value == AppSettingsController.instance.serverUrl.value) return;
     _urlController.text = value;
     AppSettingsController.instance.setServerUrl(value);
-    // 地址变更时重置 LiveApiFactory，下次访问会按需启停内嵌服务
-    unawaited(LiveApiFactory.reset());
   }
 
   /// 规范化地址：修复 iOS 键盘吞冒号、补 scheme、去尾斜杠。

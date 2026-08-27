@@ -50,6 +50,27 @@ export class ServerConfig {
   /** 同步数据 SQLite 数据库路径（为空则纯内存模式，不持久化） */
   readonly syncDbPath: string;
 
+  /** 插件黑名单（pluginId 列表） */
+  readonly pluginDisabled: string[];
+
+  /** 插件解压目录（默认 ./src/plugins，随仓库一起分发） */
+  readonly pluginDataDir: string;
+
+  /** 单 plugin context 内存上限（MB） */
+  readonly pluginQuickjsMemoryMb: number;
+
+  /** 单 plugin context 栈大小 */
+  readonly pluginQuickjsStackSize: number;
+
+  /** 凭据状态后台轮询间隔（分钟）；0 关闭（仅懒查） */
+  readonly pluginCredentialCheckIntervalMinutes: number;
+
+  /** 凭据缓存 TTL（分钟）；超过触发懒查 */
+  readonly pluginCredentialStaleAfterMinutes: number;
+
+  /** 同时探测状态的 plugin 数（防风控） */
+  readonly pluginCredentialConcurrency: number;
+
   constructor(options: {
     port?: number;
     host?: string;
@@ -66,6 +87,13 @@ export class ServerConfig {
     coverDir?: string;
     avatarDir?: string;
     syncDbPath?: string;
+    pluginDisabled?: string[];
+    pluginDataDir?: string;
+    pluginQuickjsMemoryMb?: number;
+    pluginQuickjsStackSize?: number;
+    pluginCredentialCheckIntervalMinutes?: number;
+    pluginCredentialStaleAfterMinutes?: number;
+    pluginCredentialConcurrency?: number;
   } = {}) {
     this.port = options.port ?? 8080;
     this.host = options.host ?? '0.0.0.0';
@@ -82,6 +110,16 @@ export class ServerConfig {
     this.coverDir = options.coverDir ?? '/tmp/live_stream/covers';
     this.avatarDir = options.avatarDir ?? '/tmp/live_stream/avatars';
     this.syncDbPath = options.syncDbPath ?? '';
+    this.pluginDisabled = options.pluginDisabled ?? [];
+    this.pluginDataDir = options.pluginDataDir ?? './src/plugins';
+    this.pluginQuickjsMemoryMb = options.pluginQuickjsMemoryMb ?? 32;
+    this.pluginQuickjsStackSize = options.pluginQuickjsStackSize ?? 4096;
+    this.pluginCredentialCheckIntervalMinutes =
+      options.pluginCredentialCheckIntervalMinutes ?? 15;
+    this.pluginCredentialStaleAfterMinutes =
+      options.pluginCredentialStaleAfterMinutes ?? 10;
+    this.pluginCredentialConcurrency =
+      options.pluginCredentialConcurrency ?? 3;
   }
 
   /**
@@ -119,6 +157,25 @@ export class ServerConfig {
       coverDir: env.COVER_DIR ?? '/tmp/live_stream/covers',
       avatarDir: env.AVATAR_DIR ?? '/tmp/live_stream/avatars',
       syncDbPath: env.SYNC_DB_PATH ?? '/data/sync_data.db',
+      pluginDisabled: (env.PLUGIN_DISABLED ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      pluginDataDir: env.PLUGIN_DATA_DIR ?? './src/plugins',
+      pluginQuickjsMemoryMb: parseIntSafe(env.PLUGIN_QUICKJS_MEMORY_MB, 32),
+      pluginQuickjsStackSize: parseIntSafe(env.PLUGIN_QUICKJS_STACK_SIZE, 4096),
+      pluginCredentialCheckIntervalMinutes: parseIntSafe(
+        env.PLUGIN_CREDENTIAL_CHECK_INTERVAL_MINUTES,
+        15,
+      ),
+      pluginCredentialStaleAfterMinutes: parseIntSafe(
+        env.PLUGIN_CREDENTIAL_STALE_AFTER_MINUTES,
+        10,
+      ),
+      pluginCredentialConcurrency: parseIntSafe(
+        env.PLUGIN_CREDENTIAL_CONCURRENCY,
+        3,
+      ),
     });
   }
 }

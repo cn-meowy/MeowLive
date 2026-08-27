@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/services/sites_service.dart';
 import 'package:simple_live_app/modules/mine/account/account_controller.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 
 class AccountPage extends GetView<AccountController> {
   const AccountPage({Key? key}) : super(key: key);
@@ -29,11 +30,10 @@ class AccountPage extends GetView<AccountController> {
   Widget _buildSiteTile(Site site) {
     final descriptor = site.account!;
     return ListTile(
-      leading: Image.asset(
+      leading: SiteLogo(
         site.logo,
         width: 36,
         height: 36,
-        errorBuilder: (_, __, ___) => const Icon(Icons.tv),
       ),
       title: Text(site.name),
       subtitle: Text(descriptor.hint),

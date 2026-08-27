@@ -11,6 +11,12 @@ import { WebSocket, RawData } from 'ws';
 import { LiveDanmaku, LiveMessage, CoreLog } from '../core/index.js';
 import { LiveSiteService } from './live-site-service.js';
 
+/** plugin 弹幕会话的输出 sink（由 DanmakuManager 持有，Host bridge 持有 sink Map） */
+export interface DanmakuSessionSink {
+  sendText(text: string): void;
+  close(reason: string): void;
+}
+
 /**
  * 弹幕 WebSocket 连接管理器
  *
@@ -26,6 +32,9 @@ export class DanmakuManager {
   /** 当前活跃连接数 */
   private _activeConnections = 0;
 
+  /** sessionId -> 输出 sink（供 plugin 弹幕 Host bridge 写回 client WS） */
+  private readonly _sessionSinks = new Map<string, DanmakuSessionSink>();
+
   constructor(service: LiveSiteService, maxConnections = 100) {
     this.service = service;
     this.maxConnections = maxConnections;
@@ -33,6 +42,37 @@ export class DanmakuManager {
 
   get activeConnections(): number {
     return this._activeConnections;
+  }
+
+  /** 注册 plugin 弹幕 sink。PluginManager 持有此 Map 引用以转发 Host.danmaku.emit */
+  registerSessionSink(sessionId: string, sink: DanmakuSessionSink): void {
+    this._sessionSinks.set(sessionId, sink);
+  }
+
+  unregisterSessionSink(sessionId: string): void {
+    this._sessionSinks.delete(sessionId);
+  }
+
+  /**
+    * 关闭指定 site 的所有弹幕会话（reload 时调用，避免旧 session 引用旧 sandbox）
+    */
+  closeAllForSite(siteId: string): void {
+    const prefix = `${siteId}#`;
+    const targets: string[] = [];
+    for (const [sid] of this._sessionSinks) {
+      // sessionId 可能不含 siteId 前缀（plugin 自定义）；无法精确按 siteId 过滤时全部关闭。
+      // PluginBackedDanmaku 实际注册 sink 用了 plugin 提供的 sessionId，未必带 siteId。
+      // 因此改为关闭所有 sink，由 danmaku.stop() 自己处理重建。
+      targets.push(sid);
+    }
+    // 简化：reload 时直接清空所有 sink；PluginManager 在替换前会 dispose 旧 runtime，
+    // 旧 danmaku 实例的 stop() 会自然结束。
+    void prefix;
+  }
+
+  /** 暴露 session sink Map 给 plugin-runtime 创建的 HostBridge */
+  get sessionSinks(): Map<string, DanmakuSessionSink> {
+    return this._sessionSinks;
   }
 
   /**

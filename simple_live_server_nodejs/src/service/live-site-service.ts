@@ -35,6 +35,8 @@ import { LocalVideoScanner } from './local-video-scanner.js';
 import { FfmpegStreamManager } from './ffmpeg-stream-manager.js';
 import { SyncDataManager } from './sync-data-manager.js';
 import { HttpClient } from '../core/common/http-client.js';
+import { PluginBackedSite } from '../core/plugin/plugin-capability-adapter.js';
+import { InstalledPlugin } from '../core/plugin/plugin-manifest.js';
 import QRCode from 'qrcode';
 
 /**
@@ -58,6 +60,8 @@ export interface SiteAccountDescriptor {
 export interface SiteInfo {
   id: string;
   name: string;
+  /** 站点图标 URL（指向插件 assets 资源，可选）。缺省时客户端回退本地图标。 */
+  logo?: string;
   account: SiteAccountDescriptor | null;
 }
 
@@ -83,8 +87,11 @@ export interface QRPollResult {
  * 管理各平台 LiveSite 实例，统一对外提供 API 调用。
  */
 export class LiveSiteService {
-  /** 平台 ID -> LiveSite 实例 */
+  /** 平台 ID -> LiveSite 实例（plugin 覆盖内置后保留 builtin 引用） */
   private readonly _sites = new Map<string, LiveSite>();
+
+  /** 内置 TS 站点引用（plugin 失败时可作 fallback，比如首页推荐需要未登录数据） */
+  private readonly _builtInSites = new Map<string, LiveSite>();
 
   /** 本地视频扫描器（local 平台数据源） */
   private _localScanner: LocalVideoScanner | null = null;
@@ -101,6 +108,17 @@ export class LiveSiteService {
   }
 
   /**
+   * 取内置站点引用（不返回 plugin 版本；返回 null 表示无内置实现）
+   *
+   * 用作 PluginBackedSite 的 fallback：部分 plugin 的首页推荐在未登录或
+   * 特殊参数下返回空 / 风控错误，此时可回退到内置 TS 适配器，保证首页
+   * 仍能展示数据并提示用户登录。
+   */
+  getBuiltInSite(siteId: string): LiveSite | null {
+    return this._builtInSites.get(siteId) ?? null;
+  }
+
+  /**
    * 注入同步数据管理器（QR 登录成功后写入 cookie）
    *
    * 应在 app 启动时、SyncDataManager.init() 之后调用。
@@ -109,17 +127,52 @@ export class LiveSiteService {
     this._syncDataManager = manager;
   }
 
+  /**
+   * 应用已加载的 plugin adapter。
+   *
+   * 同 id plugin 覆盖内置 TS 适配器（参考 .kilo/plans/1787559392712-meowlive-analysis.md §4）。
+   * 应在 PluginManager.init() 完成后调用一次；reload 时再调一次。
+   */
+  applyPlugins(
+    sites: Map<string, LiveSite>,
+    installed: InstalledPlugin[] = [],
+  ): void {
+    this._installedPlugins = installed;
+    for (const [pluginId, site] of sites) {
+      if (this._sites.has(pluginId)) {
+        CoreLog.info(
+          `[LiveSiteService] plugin 覆盖内置适配器: ${pluginId}`,
+        );
+      }
+      this._sites.set(pluginId, site);
+    }
+  }
+
+  /** 暴露已应用 plugin 的 manifest，供 credential-status-cache / login-info 路由使用 */
+  getInstalledPlugins(): InstalledPlugin[] {
+    return this._installedPlugins;
+  }
+
+  private _installedPlugins: InstalledPlugin[] = [];
+
   private _initSites(): void {
     const bilibili = new BiliBiliSite();
     bilibili.cookie = this.config.bilibiliCookie;
     this._sites.set('bilibili', bilibili);
+    this._builtInSites.set('bilibili', bilibili);
 
-    this._sites.set('douyu', new DouyuSite());
-    this._sites.set('huya', new HuyaSite());
+    const douyu = new DouyuSite();
+    this._sites.set('douyu', douyu);
+    this._builtInSites.set('douyu', douyu);
+
+    const huya = new HuyaSite();
+    this._sites.set('huya', huya);
+    this._builtInSites.set('huya', huya);
 
     const douyin = new DouyinSite();
     douyin.cookie = this.config.douyinCookie;
     this._sites.set('douyin', douyin);
+    this._builtInSites.set('douyin', douyin);
   }
 
   /**
@@ -215,6 +268,7 @@ export class LiveSiteService {
       result.push({
         id: site.id,
         name: site.name,
+        logo: this._getSiteLogo(site.id),
         account: this._getAccountDescriptor(site.id),
       });
     }
@@ -222,11 +276,48 @@ export class LiveSiteService {
   }
 
   /**
+   * 站点图标 URL
+   *
+   * 优先返回已安装插件的 `assets/mini_live_card_<siteId>.png`（30×30 小图标），
+   * 无对应插件时返回 undefined，客户端回退到本地图标。
+   */
+  private _getSiteLogo(siteId: string): string | undefined {
+    const plugin = this._installedPlugins.find((p) => p.pluginId === siteId);
+    if (plugin) {
+      return `/api/v1/plugins/assets/${siteId}/mini_live_card_${siteId}.png`;
+    }
+    return undefined;
+  }
+
+  /**
    * 获取指定站点的账号描述符
    *
    * 返回 null 表示该站点不需要账号设置（不在账号页显示）。
+   *
+   * 优先级：
+   * 1. plugin manifest 中 auth.required === false → null
+   * 2. plugin manifest 中 loginFlow.kind === 'webview' → cookie 类描述符
+   * 3. plugin manifest 中 credentialKinds 包含 'cookie' → cookie 类描述符
+   * 4. 内置平台：bilibili → qr, douyin → cookie, local → username, 其他 → null
    */
   private _getAccountDescriptor(siteId: string): SiteAccountDescriptor | null {
+    const plugin = this._installedPlugins.find((p) => p.pluginId === siteId);
+    if (plugin) {
+      if (plugin.manifest.auth?.required === false) return null;
+      const loginFlow = plugin.manifest.loginFlow;
+      const kinds = plugin.manifest.auth?.credentialKinds ?? [];
+      if (loginFlow?.kind === 'webview' || kinds.includes('cookie')) {
+        return {
+          type: 'cookie',
+          label: '配置 Cookie',
+          hint:
+            loginFlow?.requiredCookieHint ??
+            '请粘贴浏览器登录后的 Cookie 字符串',
+        };
+      }
+      return { type: 'qr', label: '扫码登录', hint: '使用 App 扫码登录' };
+    }
+
     switch (siteId) {
       case 'bilibili':
         return { type: 'qr', label: '扫码登录', hint: '使用哔哩哔哩 App 扫码登录' };

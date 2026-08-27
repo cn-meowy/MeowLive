@@ -1,0 +1,69 @@
+{
+  "pluginId": "yy",
+  "version": "2.0.3",
+  "apiVersion": 1,
+  "displayName": "YY直播",
+  "platformDescription": "YY 直播平台",
+  "liveTypes": [
+    "6"
+  ],
+  "entry": "index.js",
+  "preloadScripts": [
+    "fflate_0.8.2_umd.js",
+    "lp_plugin_yy_2.0.3_danmaku.js"
+  ],
+  "auth": {
+    "required": false,
+    "credentialKinds": [],
+    "supportsStatusCheck": false,
+    "supportsValidation": false
+  },
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available",
+      "driver": "plugin_js_v1",
+      "transport": "websocket",
+      "protocolId": "yy_ws_binary",
+      "protocolVersion": "1"
+    }
+  },
+  "changelog": [
+    "manifest 规范化：platformDescription 仅描述平台定位，登录需求改由 auth.required 与 credentialKinds 明确声明",
+    "登录需求明确为不需要：该插件不声明账号凭据",
+    "2.0.3:去除 setTimeout/clearTimeout 调用(JSContext 无该 API);AP 登录后改为同步发送 ChannelStreamsUpdateRequest,15s 协议级超时回退由 Host.ws.open 的 timeoutMs 与服务端空闲断连兜底",
+    "2.0.2:回滚列表 URL 到 /mobyy/nav 与 rubiks-idx /nav/{id}/{parentId},修复列表出不来;补齐 fflate preload 修复取流时 zlib 解压缺失",
+    "2.0.1:播放取流走 Host.ws 通用 WebSocket 桥,TARS 二进制协议、AP 登录与 ChannelStreams/GearLine 流程全部下沉到插件 JS",
+    "第一次测试"
+  ],
+  "shareResolve": {
+    "hosts": [
+      "yy.com"
+    ]
+  },
+  "hostBehavior": {
+    "liveStateFailureFallback": "0",
+    "externalRoomURLTemplate": "https://www.yy.com/{roomId}",
+    "themeColor": "#FFCC00"
+  }
+}

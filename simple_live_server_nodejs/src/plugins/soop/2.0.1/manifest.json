@@ -1,0 +1,109 @@
+{
+  "pluginId": "soop",
+  "version": "2.0.1",
+  "apiVersion": 1,
+  "displayName": "SOOP",
+  "platformDescription": "SOOP 韩国直播平台，原 AfreecaTV",
+  "liveTypes": [
+    "8"
+  ],
+  "entry": "index.js",
+  "preloadScripts": [
+    "lp_plugin_soop_1.0.10_login.js",
+    "lp_plugin_soop_1.0.10_danmaku.js"
+  ],
+  "auth": {
+    "required": false,
+    "credentialKinds": [
+      "cookie"
+    ],
+    "supportsStatusCheck": true,
+    "supportsValidation": true
+  },
+  "loginFlow": {
+    "kind": "webview",
+    "loginURL": "https://login.sooplive.com/afreeca/login.php",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36",
+    "cookieDomains": [
+      "sooplive.com",
+      "sooplive.co.kr",
+      "afreecatv.com"
+    ],
+    "authSignalCookies": [
+      "PdboxTicket",
+      "AuthTicket",
+      "BbsTicket",
+      "RDB",
+      "_au",
+      "SOOP_TOKEN",
+      "access_token"
+    ],
+    "uidCookieNames": [
+      "PdboxBbs",
+      "PdboxUser",
+      "AFTV_UID",
+      "szUid",
+      "uid"
+    ],
+    "postRedirectDelay": 0,
+    "requiredCookieHint": "需包含 SOOP 登录态 cookie（如 AuthTicket/BbsTicket/SOOP_TOKEN）",
+    "websiteHost": "sooplive.com"
+  },
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "partial",
+      "reason": "19+ 需要登录"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available",
+      "driver": "plugin_js_v1",
+      "transport": "websocket",
+      "protocolId": "soop_ws_binary",
+      "protocolVersion": "2"
+    }
+  },
+  "changelog": [
+    "2.0.1：19+ 匿名详情回退时保留可公开访问的直播封面与主播头像；播放仍需要有效 SOOP 登录态",
+    "manifest 规范化：platformDescription 仅描述平台定位，登录需求改由 auth.required 与 credentialKinds 明确声明",
+    "原 platformDescription 说明已迁移到 changelog：韩国直播平台(原AfreecaTV，支持应用内登录会话)",
+    "登录需求明确为可选：未登录可尝试公开内容，受限内容可使用宿主提供的平台 cookie 登录态",
+    "1.0.10：登录能力抽离到 login.js，补齐 setCredential/clearCredential/getCredentialStatus/validateCredential，并保留 setCookie/clearCookie 兼容入口",
+    "1.0.10：manifest 补齐 auth/loginFlow 声明，宿主平台账号页可识别 SOOP 登录入口",
+    "1.0.10：validateCredential 通过 get_private_info.php 轻量校验宿主 Cookie，成功后返回账号标识",
+    "弹幕握手改为当前 SOOP 网页端实际使用的 binary chat 协议：先发 SVC_LOGIN，再按回包发 SVC_JOINCH",
+    "WebSocket 恢复 chat 子协议，并按当前站点要求改为 binary frame 收发/解析",
+    "继续透传运行时 Cookie 和 User-Agent，保留原有房间与播放解析能力"
+  ],
+  "shareResolve": {
+    "hosts": [
+      "sooplive.co.kr",
+      "afreecatv.com"
+    ]
+  },
+  "hostBehavior": {
+    "favoriteIdentityKey": "userId",
+    "externalRoomURLTemplate": "https://play.sooplive.co.kr/{userId}",
+    "themeColor": "#0078F2"
+  },
+  "sessionMigration": {
+    "defaultCookie": "AbroadChk=OK"
+  }
+}

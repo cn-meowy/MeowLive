@@ -1,0 +1,70 @@
+{
+  "pluginId": "huya",
+  "version": "2.0.9",
+  "apiVersion": 1,
+  "displayName": "虎牙",
+  "platformDescription": "虎牙直播平台",
+  "liveTypes": [
+    "1"
+  ],
+  "entry": "index.js",
+  "preloadScripts": [
+    "huya.js",
+    "lp_plugin_huya_1.0.4_danmaku.js"
+  ],
+  "auth": {
+    "required": false,
+    "credentialKinds": [],
+    "supportsStatusCheck": false,
+    "supportsValidation": false
+  },
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available",
+      "driver": "plugin_js_v1",
+      "transport": "websocket",
+      "protocolId": "huya_ws_jce",
+      "protocolVersion": "1"
+    }
+  },
+  "changelog": [
+    "直播播放仅返回 FLV，不再暴露任何 HLS 清晰度",
+    "移除 HS、HS24 约两分钟后 playlist 403 的短时效 HLS 路线",
+    "保留各 CDN 的 FLV 线路与 WUP 独立签名，回放继续使用上游唯一提供的 HLS VOD"
+  ],
+  "shareResolve": {
+    "hosts": [
+      "huya.com",
+      "hy.fan"
+    ]
+  },
+  "hostBehavior": {
+    "playableLiveStates": [
+      "1",
+      "2"
+    ],
+    "externalRoomURLTemplate": "https://www.huya.com/{roomId}",
+    "themeColor": "#FF9900"
+  }
+}

@@ -14,7 +14,8 @@ import 'package:simple_live_app/models/account/site_account_descriptor.dart';
 /// - 后端返回空 / 拉取失败 / 未配置服务端：`remoteSites` 为空，
 ///   `Sites.supportSites` 返回空列表（UI 显示空态），不回退到本地 `allSites`
 ///
-/// logo 用本地 assets 映射兜底（已知 4 平台有图，未知用默认 logo）。
+/// logo 优先使用后端返回的 `logo` 字段（URL 或本地 assets 路径），
+/// 空/未提供时用本地 assets 映射兜底（已知 4 平台有图，未知用默认 logo）。
 class SitesService extends GetxService {
   static SitesService get instance => Get.find<SitesService>();
 
@@ -33,11 +34,19 @@ class SitesService extends GetxService {
   /// 默认 logo（未知平台兜底）
   static const String _defaultLogo = 'assets/images/logo.png';
 
+  /// 拉取代次计数器：用于丢弃过期的 in-flight 请求。
+  ///
+  /// serverUrl 连续切换时，旧地址的慢请求若晚于新请求返回，会覆盖新的正确
+  /// 列表（例如切回旧/内嵌地址的 4 站点）。每次发起拉取自增，返回时仅当
+  /// 仍是最新一代才写入 `remoteSites`。
+  static int _fetchGeneration = 0;
+
   /// 从后端拉取站点列表
   ///
   /// 成功后按 `siteSort` 重排 `remoteSites`，新站点追加末尾并持久化排序。
   /// 失败或返回空时 `remoteSites` 保持为空（不回退到本地），不抛异常。
   Future<void> fetchRemoteSites() async {
+    final gen = ++_fetchGeneration;
     final settings = AppSettingsController.instance;
     final url = settings.serverUrl.value;
     Log.d('fetchRemoteSites start: serverUrl=$url');
@@ -45,7 +54,7 @@ class SitesService extends GetxService {
       final api = await LiveApiFactory.instanceAsync;
       Log.d('fetchRemoteSites: instance ready, requesting /api/v1/sites');
       final list = await api.getSites();
-      Log.d('fetchRemoteSites: response count=${list.length}');
+      Log.d('fetchRemoteSites: response count=${list.length}, ids=${list.map((e) => e['id']).join(",")}');
       if (list.isEmpty) {
         Log.w('后端返回空站点列表 url=$url');
         return;
@@ -54,26 +63,32 @@ class SitesService extends GetxService {
       final sites = list.map((e) {
         final id = e['id'] ?? '';
         final name = e['name'] ?? id;
+        // 优先使用后端返回的站点图标 URL；缺省/为空时回退本地 assets 映射
+        final backendLogo = e['logo']?.toString().trim() ?? '';
         return Site(
           id: id,
           name: name,
-          logo: _logoMap[id] ?? _defaultLogo,
+          logo: backendLogo.isEmpty ? (_logoMap[id] ?? _defaultLogo) : backendLogo,
           account: SiteAccountDescriptor.fromJsonOrNull(
             (e['account'] as Map?)?.cast<String, dynamic>(),
           ),
         );
       }).toList();
 
+      if (gen != _fetchGeneration) {
+        Log.d('fetchRemoteSites: 丢弃过期一代结果 (gen=$gen, latest=$_fetchGeneration)');
+        return;
+      }
       final newSites = _sortBySiteSort(sites);
       remoteSites.assignAll(newSites);
       _syncSiteSort(remoteSites.map((s) => s.id).toList());
       Log.d('远程站点列表拉取成功: ${remoteSites.length} 个');
     } on TypeError catch (e, s) {
       Log.e('解析 /sites 响应失败 url=$url, error=$e', s);
-      remoteSites.clear();
+      if (gen == _fetchGeneration) remoteSites.clear();
     } catch (e, s) {
       Log.e('拉取远程站点列表失败 url=$url, error=$e', s);
-      remoteSites.clear();
+      if (gen == _fetchGeneration) remoteSites.clear();
     }
   }
 

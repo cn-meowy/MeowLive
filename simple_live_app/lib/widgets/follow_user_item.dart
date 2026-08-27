@@ -6,6 +6,7 @@ import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 import 'dart:ui' as ui;
 
 class FollowUserItem extends StatelessWidget {
@@ -78,7 +79,7 @@ class FollowUserItem extends StatelessWidget {
       subtitle: Wrap(
         runSpacing: 1.0,
         children: [
-          Image.asset(
+          SiteLogo(
             site.logo,
             width: 20,
           ),

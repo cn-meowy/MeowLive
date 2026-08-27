@@ -1,0 +1,72 @@
+{
+  "pluginId": "youtube",
+  "version": "2.0.1",
+  "apiVersion": 1,
+  "displayName": "YouTube",
+  "platformDescription": "YouTube 直播平台",
+  "liveTypes": [
+    "7"
+  ],
+  "entry": "index.js",
+  "preloadScripts": [
+    "lp_plugin_youtube_2.0.1_danmaku.js"
+  ],
+  "auth": {
+    "required": false,
+    "credentialKinds": [],
+    "supportsStatusCheck": false,
+    "supportsValidation": false
+  },
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available",
+      "driver": "plugin_js_v1",
+      "transport": "http_polling",
+      "protocolId": "youtube_live_chat_json",
+      "protocolVersion": "2"
+    }
+  },
+  "changelog": [
+    "修复弹幕轮询错误选择嵌套 reload continuation 导致重复拉取最后一批消息的问题",
+    "弹幕改为按 liveChatContinuation 精确推进游标，并传递 clickTrackingParams 与服务端 timeoutMs",
+    "新增基于 YouTube 消息 ID 的会话级有界去重、错误退避与 continuation 自动刷新",
+    "补充 Super Sticker 解析，并避免把 ticker 或页面其他嵌套 renderer 重复当作聊天消息",
+    "manifest 规范化：platformDescription 仅描述平台定位，登录需求改由 auth.required 与 credentialKinds 明确声明",
+    "登录需求明确为不需要：该插件不声明账号凭据",
+    "完整覆盖研究版 YouTube 播放链路：watch 初始响应 + youtubei 多端 player 统一收集 manifest",
+    "按真实清晰度梯子评分选源，默认输出从高画质到低画质排序的质量列表",
+    "demuxed manifest 保留清晰度标签并回退 master playUrl，避免只拿到无声音视频子流",
+    "弹幕协议迁移到插件驱动：YouTube live chat 轮询、continuation 推进与消息解析改为 plugin_js_v1"
+  ],
+  "shareResolve": {
+    "hosts": [
+      "youtube.com",
+      "youtu.be"
+    ]
+  },
+  "hostBehavior": {
+    "externalRoomURLTemplate": "https://www.youtube.com/watch?v={roomId}",
+    "themeColor": "#FF0000"
+  }
+}

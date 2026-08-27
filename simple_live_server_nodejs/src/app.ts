@@ -19,6 +19,8 @@ import { LiveSiteService } from './service/live-site-service.js';
 import { DanmakuManager } from './service/danmaku-manager.js';
 import { FfmpegStreamManager } from './service/ffmpeg-stream-manager.js';
 import { SyncDataManager } from './service/sync-data-manager.js';
+import { PluginManager } from './service/plugin-manager.js';
+import { CredentialStatusCache } from './service/credential-status-cache.js';
 import { registerSiteRoutes } from './router/site-routes.js';
 import { registerRoomRoutes } from './router/room-routes.js';
 import { registerStreamRoutes, registerHlsRoute, registerCoverRoute, registerAvatarRoute } from './router/stream-routes.js';
@@ -26,6 +28,7 @@ import { registerDanmakuRoutes } from './router/danmaku-routes.js';
 import { registerSyncRoutes } from './router/sync-routes.js';
 import { registerCookieRoutes } from './router/cookie-routes.js';
 import { registerAccountRoutes } from './router/account-routes.js';
+import { registerPluginRoutes } from './router/plugin-routes.js';
 
 /**
  * Simple Live Server 主类
@@ -38,6 +41,8 @@ export class SimpleLiveServer {
   readonly danmakuManager: DanmakuManager;
   readonly syncDataManager: SyncDataManager;
   readonly streamManager: FfmpegStreamManager;
+  readonly pluginManager: PluginManager;
+  readonly credentialCache: CredentialStatusCache;
 
   private app: FastifyInstance | null = null;
 
@@ -53,6 +58,20 @@ export class SimpleLiveServer {
       streamDir: config.streamDir,
       maxSessions: config.maxStreamSessions,
       idleTimeoutSeconds: config.streamIdleTimeout,
+    });
+    this.pluginManager = new PluginManager({
+      dataDir: config.pluginDataDir,
+      disabledList: config.pluginDisabled,
+      syncDataManager: this.syncDataManager,
+      danmakuManager: this.danmakuManager,
+      builtInSiteProvider: (siteId) => this.service.getBuiltInSite(siteId),
+    });
+    this.credentialCache = new CredentialStatusCache({
+      syncDataManager: this.syncDataManager,
+      pluginManager: this.pluginManager,
+      checkIntervalMinutes: config.pluginCredentialCheckIntervalMinutes,
+      staleAfterMinutes: config.pluginCredentialStaleAfterMinutes,
+      concurrency: config.pluginCredentialConcurrency,
     });
   }
 
@@ -117,10 +136,11 @@ export class SimpleLiveServer {
     });
 
     // 注册所有路由
-    registerSiteRoutes(app, this.service);
+    registerSiteRoutes(app, this.service, this.credentialCache);
     registerRoomRoutes(app, {
       service: this.service,
       streamManager: this.streamManager,
+      cache: this.credentialCache,
     });
     registerStreamRoutes(app, {
       streamManager: this.streamManager,
@@ -129,8 +149,16 @@ export class SimpleLiveServer {
     });
     registerDanmakuRoutes(app, this.danmakuManager);
     registerSyncRoutes(app, this.syncDataManager);
-    registerCookieRoutes(app, this.syncDataManager);
-    registerAccountRoutes(app, this.service, this.syncDataManager);
+    registerCookieRoutes(app, this.syncDataManager, (siteId) =>
+      this.credentialCache.invalidate(siteId),
+    );
+    registerAccountRoutes(
+      app,
+      this.service,
+      this.syncDataManager,
+      this.credentialCache,
+    );
+    registerPluginRoutes(app, this.pluginManager, this.service);
 
     // 封面图片静态文件服务：/api/v1/stream/covers/:filename
     registerCoverRoute(app, this.config.coverDir);
@@ -197,6 +225,19 @@ export class SimpleLiveServer {
       console.error('加载本地视频数据失败:', err);
     }
 
+    // 初始化 plugin：扫描 src/plugins/ → 构建 LiveSite → 覆盖 LiveSiteService
+    // 失败时降级到「纯内置模式」运行，不阻断服务启动
+    try {
+      const pluginSites = await this.pluginManager.init();
+      this.service.applyPlugins(
+        pluginSites,
+        this.pluginManager.getInstalled(),
+      );
+      this.credentialCache.primeWithInstalled(this.pluginManager.getInstalled());
+    } catch (err) {
+      console.error('插件初始化失败（已降级到内置模式）:', err);
+    }
+
     // 演示模式：预启动所有本地视频直播流，使点播即时播放。
     // 必须在 loadLocalData（房间列表就绪）之后、HTTP 服务监听之前完成，
     // 确保客户端首次请求即可命中已就绪的 HLS 会话。
@@ -210,6 +251,15 @@ export class SimpleLiveServer {
     }
 
     this.app = await this.buildApp();
+
+    // 启动后台任务：credential 轮询
+    // plugin 自动更新已关闭——插件随仓库分发在 src/plugins/；后续可通过
+    // POST /api/v1/plugins/reload 或 POST /api/v1/plugins/reseed 手动重载。
+    try {
+      this.credentialCache.startAutoCheck();
+    } catch (err) {
+      console.error('启动 credential 轮询失败:', err);
+    }
 
     try {
       await this.app.listen({
@@ -241,6 +291,8 @@ export class SimpleLiveServer {
       await this.app.close();
       this.app = null;
     }
+    this.credentialCache.stopAutoCheck();
+    await this.pluginManager.disposeAll();
     await this.streamManager.dispose();
     this.syncDataManager.close();
   }

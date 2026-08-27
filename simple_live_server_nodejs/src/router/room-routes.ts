@@ -7,11 +7,19 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { LiveSiteService } from '../service/live-site-service.js';
 import { FfmpegStreamManager } from '../service/ffmpeg-stream-manager.js';
-import { sendJson, sendBadRequest, sendCustomError, sendError } from './route-helpers.js';
+import {
+  sendJson,
+  sendBadRequest,
+  sendCustomError,
+  sendError,
+  sendJsonWithCredential,
+} from './route-helpers.js';
+import { CredentialStatusCache } from '../service/credential-status-cache.js';
 
 export interface RoomRouterOptions {
   service: LiveSiteService;
   streamManager: FfmpegStreamManager;
+  cache?: CredentialStatusCache;
 }
 
 /**
@@ -23,13 +31,18 @@ export async function registerRoomRoutes(
   app: FastifyInstance,
   options: RoomRouterOptions,
 ): Promise<void> {
-  const { service, streamManager } = options;
+  const { service, streamManager, cache } = options;
   // 房间详情
   app.get('/api/v1/sites/:siteId/rooms/:roomId', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       const { siteId, roomId } = req.params as { siteId: string; roomId: string };
       const detail = await service.getRoomDetail(siteId, roomId);
-      sendJson(reply, LiveSiteService.roomDetailToJson(detail));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        LiveSiteService.roomDetailToJson(detail),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '获取房间详情失败');
       sendError(reply, e);
@@ -41,7 +54,7 @@ export async function registerRoomRoutes(
     try {
       const { siteId, roomId } = req.params as { siteId: string; roomId: string };
       const status = await service.getLiveStatus(siteId, roomId);
-      sendJson(reply, { liveStatus: status });
+      sendJsonWithCredential(reply, siteId, { liveStatus: status }, cache ?? null);
     } catch (e) {
       req.log.error({ err: e }, '获取直播状态失败');
       sendError(reply, e);
@@ -55,7 +68,12 @@ export async function registerRoomRoutes(
       // 获取清晰度需要先拿到房间详情
       const detail = await service.getRoomDetail(siteId, roomId);
       const qualities = await service.getPlayQualites(siteId, detail);
-      sendJson(reply, qualities.map((q) => LiveSiteService.playQualityToJson(q)));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        qualities.map((q) => LiveSiteService.playQualityToJson(q)),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '获取清晰度列表失败');
       sendError(reply, e);
@@ -96,7 +114,12 @@ export async function registerRoomRoutes(
         const filePath = playUrl.urls[0];
         try {
           const session = await streamManager.getOrCreateLocalStream(filePath, siteId, detail.roomId);
-          sendJson(reply, { urls: [session.hlsUrl], headers: playUrl.headers });
+          sendJsonWithCredential(
+            reply,
+            siteId,
+            { urls: [session.hlsUrl], headers: playUrl.headers },
+            cache ?? null,
+          );
         } catch (e) {
           req.log.error({ err: e }, 'local 平台转 HLS 失败');
           sendCustomError(reply, 500, e instanceof Error ? e.message : String(e));
@@ -104,7 +127,12 @@ export async function registerRoomRoutes(
         return;
       }
 
-      sendJson(reply, LiveSiteService.playUrlToJson(playUrl));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        LiveSiteService.playUrlToJson(playUrl),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '获取播放直链失败');
       sendError(reply, e);
@@ -116,7 +144,12 @@ export async function registerRoomRoutes(
     try {
       const { siteId, roomId } = req.params as { siteId: string; roomId: string };
       const scList = await service.getSuperChatMessage(siteId, roomId);
-      sendJson(reply, scList.map((sc) => LiveSiteService.superChatToJson(sc)));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        scList.map((sc) => LiveSiteService.superChatToJson(sc)),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '获取 SC 消息失败');
       sendError(reply, e);

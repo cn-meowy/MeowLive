@@ -14,9 +14,10 @@ import { sendJson, sendBadRequest, sendError } from './route-helpers.js';
  * 注册 Cookie 路由
  */
 export async function registerCookieRoutes(
-  app: FastifyInstance,
-  manager: SyncDataManager,
-): Promise<void> {
+    app: FastifyInstance,
+    manager: SyncDataManager,
+    onCookieChange?: (siteId: string, op: 'put' | 'delete') => void,
+  ): Promise<void> {
   // GET /api/v1/cookie/:siteId - 获取指定平台 Cookie
   app.get('/api/v1/cookie/:siteId', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -46,8 +47,13 @@ export async function registerCookieRoutes(
         return;
       }
 
-      manager.setCookie(siteId, cookie);
-      sendJson(reply, { siteId, cookie });
+manager.setCookie(siteId, cookie);
+        try {
+          onCookieChange?.(siteId, 'put');
+        } catch {
+          // ignore
+        }
+        sendJson(reply, { siteId, cookie });
     } catch (e) {
       req.log.error({ err: e }, '更新 Cookie 失败');
       sendError(reply, e);
@@ -58,8 +64,13 @@ export async function registerCookieRoutes(
   app.delete('/api/v1/cookie/:siteId', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       const { siteId } = req.params as { siteId: string };
-      manager.deleteCookie(siteId);
-      sendJson(reply, { siteId, deleted: true });
+manager.deleteCookie(siteId);
+        try {
+          onCookieChange?.(siteId, 'delete');
+        } catch {
+          // ignore
+        }
+        sendJson(reply, { siteId, deleted: true });
     } catch (e) {
       req.log.error({ err: e }, '删除 Cookie 失败');
       sendError(reply, e);

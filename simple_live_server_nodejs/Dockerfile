@@ -15,7 +15,7 @@ COPY package.json package-lock.json* ./
 # 安装所有依赖（tsx 用于运行 TypeScript）
 RUN npm ci
 
-# 复制源代码
+# 复制源代码（含 src/plugins/ 各平台站点插件，随仓库一起分发）
 COPY tsconfig.json ./
 COPY src/ ./src/
 

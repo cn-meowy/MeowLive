@@ -4,6 +4,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/services/sites_service.dart';
 import 'package:simple_live_app/modules/category/category_controller.dart';
 import 'package:simple_live_app/modules/category/category_list_view.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 
 class CategoryPage extends GetView<CategoryController> {
   const CategoryPage({Key? key}) : super(key: key);
@@ -29,7 +30,7 @@ class CategoryPage extends GetView<CategoryController> {
                 (e) => Tab(
                   child: Row(
                     children: [
-                      Image.asset(
+                      SiteLogo(
                         e.logo,
                         width: 24,
                       ),

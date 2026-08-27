@@ -7,6 +7,7 @@ import 'package:simple_live_app/modules/mine/history/history_controller.dart';
 import 'package:simple_live_app/routes/app_navigation.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/page_grid_view.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 
 class HistoryPage extends GetView<HistoryController> {
   const HistoryPage({Key? key}) : super(key: key);
@@ -65,7 +66,7 @@ class HistoryPage extends GetView<HistoryController> {
                   Expanded(
                     child: Row(
                       children: [
-                        Image.asset(
+                        SiteLogo(
                           site.logo,
                           width: 20,
                         ),

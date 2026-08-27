@@ -5,6 +5,7 @@ import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/modules/settings/indexed_settings/indexed_settings_controller.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 
 class IndexedSettingsPage extends GetView<IndexedSettingsController> {
   const IndexedSettingsPage({Key? key}) : super(key: key);
@@ -81,7 +82,7 @@ class IndexedSettingsPage extends GetView<IndexedSettingsController> {
                           key: ValueKey(e.id),
                           visualDensity: VisualDensity.compact,
                           title: Text(e.name),
-                          leading: Image.asset(
+                          leading: SiteLogo(
                             e.logo,
                             width: 24,
                             height: 24,

@@ -6,12 +6,45 @@
 
 import { FastifyReply } from 'fastify';
 import { ApiResponse } from '../dto/api-response.js';
+import {
+  CredentialStatusCache,
+  CredentialStatus,
+} from '../service/credential-status-cache.js';
 
 /**
  * 发送成功响应
  */
 export function sendJson(reply: FastifyReply, data: unknown): void {
   reply.send(ApiResponse.success(data));
+}
+
+/**
+ * 发送带 credentialStatus envelope 的响应（Phase 3）
+ *
+ * 若 cache 未注入则回退到普通 sendJson（向后兼容）。
+ * 不抛错：cache 异常时仍返回业务数据，避免 envelope 注入失败影响业务。
+ */
+export function sendJsonWithCredential(
+  reply: FastifyReply,
+  siteId: string,
+  data: unknown,
+  cache: CredentialStatusCache | null,
+): void {
+  if (!cache) {
+    sendJson(reply, data);
+    return;
+  }
+  try {
+    const status = cache.getSync(siteId);
+    reply.send({
+      code: 0,
+      data,
+      msg: '',
+      credentialStatus: status,
+    });
+  } catch {
+    sendJson(reply, data);
+  }
 }
 
 /**
@@ -57,4 +90,7 @@ export function getPage(query: Record<string, unknown>): number {
   }
   return 1;
 }
+
+/** 显式 re-export 以便 routes 直接使用 CredentialStatus 类型 */
+export type { CredentialStatus };
 

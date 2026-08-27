@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/services/embedded_live_server.dart';
 import 'package:simple_live_app/app/services/live_api_service.dart';
 import 'package:simple_live_app/app/services/remote_live_api.dart';
@@ -111,6 +112,19 @@ class LiveApiFactory {
     final isLocal = await LocalIpUtil.isLocalHost(serverUrl);
 
     if (isLocal) {
+      // 本机地址可能是「自建后端就跑在本机」（如 127.0.0.1/localhost/本机 LAN IP
+      // 上运行的 simple_live_server_nodejs）。此时必须先探测该地址是否已有可用后端：
+      // 是 → 直接连接该后端（渲染其返回的站点列表），而不是误启动内嵌服务（内嵌
+      // 服务只会返回内置 4 站点，导致首页看不到后端站点、也看不到对外请求）。
+      // 仅当该地址不存在可用后端时才回退启动内嵌服务（本地 demo / 局域网共享模式）。
+      final existingBackend = await checkServerAvailable(serverUrl);
+      if (existingBackend) {
+        await EmbeddedLiveServer.instance.stop();
+        settings.embeddedServerStatus.value = 'remote:ok';
+        _resolvedBaseUrl = serverUrl;
+        Log.d('[LiveApiFactory] 本机地址已存在可用后端，直接连接 remote: $serverUrl');
+        return RemoteLiveApi(serverUrl);
+      }
       // 解析 host 与 port
       final uri = Uri.parse(serverUrl);
       var host = uri.host;
@@ -134,6 +148,7 @@ class LiveApiFactory {
             .start(host: host, port: port);
         settings.embeddedServerStatus.value = 'running';
         _resolvedBaseUrl = baseUrl;
+        Log.d('[LiveApiFactory] 本机无可用后端，启动内嵌服务 embedded: $baseUrl');
         return RemoteLiveApi(baseUrl);
       } catch (e) {
         settings.embeddedServerStatus.value = 'error: $e';
@@ -145,6 +160,7 @@ class LiveApiFactory {
     await EmbeddedLiveServer.instance.stop();
     settings.embeddedServerStatus.value = 'remote:checking';
     _resolvedBaseUrl = serverUrl;
+    Log.d('[LiveApiFactory] 远端地址，使用 remote backend: $serverUrl');
     // 不 await 检测，避免阻塞实例创建和后续 API 调用；
     // 检查 serverUrl 是否仍为被检测的 url，仅在未变更时更新状态，防止覆盖用户新地址的检测结果
     _checkRemoteAvailable(serverUrl);

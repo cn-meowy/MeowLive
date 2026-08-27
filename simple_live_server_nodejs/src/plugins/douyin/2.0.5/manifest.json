@@ -1,0 +1,99 @@
+{
+  "pluginId": "douyin",
+  "version": "2.0.5",
+  "apiVersion": 1,
+  "displayName": "抖音",
+  "platformDescription": "抖音直播平台",
+  "liveTypes": [
+    "2"
+  ],
+  "entry": "index.js",
+  "preloadScripts": [
+    "abogus_bdms_env.js",
+    "abogus_bdms_sdk.js",
+    "abogus_bdms_bind.js",
+    "webmssdk.js",
+    "fflate_0.8.2_umd.js",
+    "lp_plugin_douyin_1.0.13_login.js",
+    "lp_plugin_douyin_1.0.13_danmaku.js"
+  ],
+  "auth": {
+    "required": true,
+    "credentialKinds": [
+      "cookie"
+    ],
+    "supportsStatusCheck": true,
+    "supportsValidation": true
+  },
+  "loginFlow": {
+    "kind": "webview",
+    "loginURL": "https://www.douyin.com/user/self",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+    "cookieDomains": [
+      "douyin.com"
+    ],
+    "authSignalCookies": [
+      "sessionid",
+      "sessionid_ss",
+      "sid_guard"
+    ],
+    "uidCookieNames": [
+      "uid_tt",
+      "uid_tt_ss",
+      "sid_tt",
+      "sessionid"
+    ],
+    "postRedirectDelay": 0,
+    "requiredCookieHint": "请先在应用内完成抖音登录",
+    "websiteHost": "douyin.com"
+  },
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available",
+      "reason": "需要先登录抖音账号后才能搜索"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available",
+      "driver": "plugin_js_v1",
+      "transport": "websocket",
+      "protocolId": "douyin_ws_protobuf",
+      "protocolVersion": "1"
+    }
+  },
+  "changelog": [
+    "2.0.5：识别抖音播放元数据中的高帧率档位，60fps 直播会显示为 60帧并优先排列",
+    "2.0.4：播放地址改为直接使用，切换清晰度/多机位不再重新取流，避免切到多机位后回到主画面",
+    "2.0.3：修复登录后搜索结果为空的问题；升级请求签名，搜索、房间列表与播放更稳定",
+    "2.0.2：搜索支持读取登录状态；未登录时会提示先登录",
+    "2.0.1：已登录时可观看已购/付费直播间；未登录仍可浏览公开内容",
+    "1.0.13：支持应用内抖音登录与登录状态检查",
+    "支持分类浏览、房间列表、播放与弹幕"
+  ],
+  "shareResolve": {
+    "hosts": [
+      "douyin.com"
+    ]
+  },
+  "hostBehavior": {
+    "externalRoomURLTemplate": "https://live.douyin.com/{roomId}",
+    "themeColor": "#111111"
+  }
+}

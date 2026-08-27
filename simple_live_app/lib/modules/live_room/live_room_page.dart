@@ -20,6 +20,7 @@ import 'package:simple_live_app/widgets/keep_alive_wrapper.dart';
 import 'package:simple_live_app/widgets/net_image.dart';
 import 'package:simple_live_app/widgets/settings/settings_action.dart';
 import 'package:simple_live_app/widgets/settings/settings_card.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 import 'package:simple_live_app/widgets/settings/settings_number.dart';
 import 'package:simple_live_app/widgets/settings/settings_switch.dart';
 import 'package:simple_live_app/widgets/superchat_card.dart';
@@ -332,7 +333,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                   AppStyle.vGap4,
                   Row(
                     children: [
-                      Image.asset(
+                      SiteLogo(
                         controller.site.logo,
                         width: 20,
                       ),

@@ -4,6 +4,7 @@ import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/services/sites_service.dart';
 import 'package:simple_live_app/modules/search/search_controller.dart';
 import 'package:simple_live_app/modules/search/search_list_view.dart';
+import 'package:simple_live_app/widgets/site_logo.dart';
 
 class SearchPage extends GetView<AppSearchController> {
   const SearchPage({Key? key}) : super(key: key);
@@ -31,7 +32,7 @@ class SearchPage extends GetView<AppSearchController> {
                 (e) => Tab(
                   child: Row(
                     children: [
-                      Image.asset(
+                      SiteLogo(
                         e.logo,
                         width: 24,
                       ),

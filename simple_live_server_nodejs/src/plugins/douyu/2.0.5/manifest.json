@@ -1,0 +1,76 @@
+{
+  "pluginId": "douyu",
+  "version": "2.0.5",
+  "apiVersion": 1,
+  "displayName": "斗鱼",
+  "platformDescription": "斗鱼直播平台",
+  "liveTypes": [
+    "3"
+  ],
+  "entry": "index.js",
+  "preloadScripts": [
+    "lp_plugin_douyu_1.0.4_danmaku.js"
+  ],
+  "auth": {
+    "required": false,
+    "credentialKinds": [],
+    "supportsStatusCheck": false,
+    "supportsValidation": false
+  },
+  "capabilities": {
+    "categories": {
+      "status": "available"
+    },
+    "rooms": {
+      "status": "available"
+    },
+    "playback": {
+      "status": "available"
+    },
+    "search": {
+      "status": "available"
+    },
+    "roomDetail": {
+      "status": "available"
+    },
+    "liveState": {
+      "status": "available"
+    },
+    "shareResolve": {
+      "status": "available"
+    },
+    "danmaku": {
+      "status": "available",
+      "driver": "plugin_js_v1",
+      "transport": "websocket",
+      "protocolId": "douyu_ws_stt",
+      "protocolVersion": "1"
+    }
+  },
+  "changelog": [
+    "修复部分宿主独立心跳回调不触发导致约 3 分钟断连：每次收帧检查心跳时限，满 30 秒时随收帧返回 mrkl；保留 pingreq 响应与独立 timer 双重兜底，并按会话节流避免高频发包",
+    "修复弹幕服务端主动断连：按当前斗鱼网页端行为，将 pingreq/tick 响应改为纯 mrkl，不再回传 tick；兼容 loginres 与 pingreq 合并下发的首帧",
+    "弹幕更贴网页行为：loginreq 补齐 ver/aver/ct/dfl/username/uid；loginres/setmsggroup 后再 joingroup（优先真实 gid，fallback -9999）；响应 pingreq；danmuproxy 在 8501-8506 端口轮选",
+    "修复弹幕 WebSocket 心跳生命周期：连接建立后每 45 秒发送 mrkl，收到弹幕帧时不再重置心跳定时器",
+    "manifest 规范化：platformDescription 仅描述平台定位，登录需求改由 auth.required 与 credentialKinds 明确声明",
+    "登录需求明确为不需要：该插件不声明账号凭据",
+    "修复斗鱼短号/靓号分享链接会把 vipId 当 roomId，导致 betard HTML 错误页被当 JSON 解析的问题",
+    "弹幕连接计划显式返回 User-Agent 请求头，WebSocket 握手责任收敛到插件侧",
+    "1.0.3：弹幕协议迁移到插件驱动，Douyu WebSocket 握手、心跳与 STT 文本解析改为 plugin_js_v1",
+    "修复 getRoomDetail 返回 userId 始终为 0 的问题：owner_id 改为 owner_uid"
+  ],
+  "shareResolve": {
+    "hosts": [
+      "douyu.com",
+      "douyu.tv"
+    ]
+  },
+  "hostBehavior": {
+    "playableLiveStates": [
+      "1",
+      "2"
+    ],
+    "externalRoomURLTemplate": "https://www.douyu.com/{roomId}",
+    "themeColor": "#FF7F00"
+  }
+}

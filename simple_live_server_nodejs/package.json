@@ -9,7 +9,8 @@
     "start": "tsx --experimental-sqlite src/index.ts",
     "dev": "tsx watch --experimental-sqlite src/index.ts",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-sqlite --test --import tsx test/*.test.ts"
+    "test": "node --experimental-sqlite --test --import tsx test/*.test.ts",
+    "plugins:list": "tsx scripts/plugins-list.ts"
   },
   "engines": {
     "node": ">=22.0.0"

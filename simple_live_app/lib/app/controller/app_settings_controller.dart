@@ -183,8 +183,15 @@ class AppSettingsController extends GetxController {
     // 用数据层驱动取代 UI 事件手动触发：用户在设置页录入/修改地址（无论
     // 失焦/测试连接/直接返回）后，首页/分类/搜索 Tab 都能即时更新；
     // 地址清空时也会触发（LiveApiFactory 抛错 → fetchRemoteSites 清空 remoteSites）。
-    ever<String>(serverUrl, (_) {
+    //
+    // 必须先 LiveApiFactory.reset() 再拉取：setServerUrl 修改 serverUrl 时，
+    // LiveApiFactory._instance 仍是按旧地址缓存/启动的实例（例如先前本机/内嵌
+    // 模式返回内置 4 站点）。若不先清缓存，fetchRemoteSites 会命中旧实例而拿到
+    // 旧地址的站点列表，且 ever 只在变更时触发一次，之后无再次拉取，导致首页
+    // 一直停留旧（内置 4 站点）列表。
+    ever<String>(serverUrl, (_) async {
       try {
+        await LiveApiFactory.reset();
         SitesService.instance.fetchRemoteSites();
       } catch (e) {
         Log.w('serverUrl 变化时拉取站点失败: $e');

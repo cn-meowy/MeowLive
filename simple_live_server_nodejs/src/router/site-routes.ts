@@ -7,7 +7,15 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { LiveSiteService } from '../service/live-site-service.js';
 import { LiveSubCategory } from '../core/index.js';
-import { sendJson, sendBadRequest, sendError, getPage } from './route-helpers.js';
+import {
+  sendJson,
+  sendBadRequest,
+  sendError,
+  getPage,
+  sendJsonWithCredential,
+} from './route-helpers.js';
+import { CredentialStatusCache } from '../service/credential-status-cache.js';
+import { CoreLog } from '../core/common/core-log.js';
 
 /**
  * 注册平台/分类/推荐/搜索路由
@@ -17,6 +25,7 @@ import { sendJson, sendBadRequest, sendError, getPage } from './route-helpers.js
 export async function registerSiteRoutes(
   app: FastifyInstance,
   service: LiveSiteService,
+  cache?: CredentialStatusCache,
 ): Promise<void> {
   // 获取所有平台
   app.get('/api/v1/sites', async (_req: FastifyRequest, reply: FastifyReply) => {
@@ -28,7 +37,12 @@ export async function registerSiteRoutes(
     try {
       const { siteId } = req.params as { siteId: string };
       const categories = await service.getCategories(siteId);
-      sendJson(reply, categories.map((c) => LiveSiteService.categoryToJson(c)));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        categories.map((c) => LiveSiteService.categoryToJson(c)),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '获取分类列表失败');
       sendError(reply, e);
@@ -41,7 +55,10 @@ export async function registerSiteRoutes(
       const { siteId } = req.params as { siteId: string };
       const page = getPage(req.query as Record<string, unknown>);
       const result = await service.getRecommendRooms(siteId, page);
-      sendJson(reply, LiveSiteService.categoryResultToJson(result));
+
+      const base = LiveSiteService.categoryResultToJson(result);
+      const payload = annotateRecommendEmpty(siteId, base, service, cache ?? null);
+      sendJsonWithCredential(reply, siteId, payload, cache ?? null);
     } catch (e) {
       req.log.error({ err: e }, '获取推荐房间失败');
       sendError(reply, e);
@@ -68,7 +85,12 @@ export async function registerSiteRoutes(
       const category = new LiveSubCategory(categoryId, name, parentId);
 
       const result = await service.getCategoryRooms(siteId, category, page);
-      sendJson(reply, LiveSiteService.categoryResultToJson(result));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        LiveSiteService.categoryResultToJson(result),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '获取分类下房间失败');
       sendError(reply, e);
@@ -89,7 +111,12 @@ export async function registerSiteRoutes(
       }
 
       const result = await service.searchRooms(siteId, keyword, page);
-      sendJson(reply, LiveSiteService.searchRoomResultToJson(result));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        LiveSiteService.searchRoomResultToJson(result),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '搜索直播间失败');
       sendError(reply, e);
@@ -110,10 +137,76 @@ export async function registerSiteRoutes(
       }
 
       const result = await service.searchAnchors(siteId, keyword, page);
-      sendJson(reply, LiveSiteService.searchAnchorResultToJson(result));
+      sendJsonWithCredential(
+        reply,
+        siteId,
+        LiveSiteService.searchAnchorResultToJson(result),
+        cache ?? null,
+      );
     } catch (e) {
       req.log.error({ err: e }, '搜索主播失败');
       sendError(reply, e);
     }
   });
 }
+
+/**
+ * 标注「平台需要登录但当前未登录」的情况
+ *
+ * 触发条件：
+ * 1. plugin manifest 要求登录（auth.required === true）
+ * 2. credential cache 状态为 missing / unknown / expired / invalid / risk_control
+ *
+ * 两种使用场景：
+ * - items 为空：纯「未登录导致无数据」错误，UI 必须显示登录提示
+ * - items 非空（已通过内置 fallback 拿到数据）：登录态下能展示更多 / 更高画质
+ *   推荐内容，UI 仍可展示「登录后查看更多」横幅
+ *
+ * 满足时在 data 内追加：
+ * - notLoggedIn: true
+ * - notLoggedInHint: 中文提示，告知前端渲染「请先登录」横幅
+ *
+ * 其它场景（无需登录的平台、已登录等）保持原样。
+ */
+function annotateRecommendEmpty(
+  siteId: string,
+  data: Record<string, unknown>,
+  service: LiveSiteService,
+  cache: CredentialStatusCache | null,
+): Record<string, unknown> {
+  const plugin = service.getInstalledPlugins().find((p) => p.pluginId === siteId);
+  const requiresAuth = plugin?.manifest.auth?.required === true;
+  if (!requiresAuth) return data;
+  if (!cache) return data;
+
+  const state = cache.getSync(siteId).state;
+  const notLoggedIn =
+    state === 'missing' ||
+    state === 'unknown' ||
+    state === 'expired' ||
+    state === 'invalid' ||
+    state === 'risk_control';
+  if (!notLoggedIn) return data;
+
+  const items = Array.isArray(data['items']) ? (data['items'] as unknown[]) : [];
+  if (items.length === 0) {
+    CoreLog.info(
+      `[site-routes.recommend] ${siteId} 返回空数据且未登录 (state=${state})，追加 notLoggedIn 标注`,
+    );
+  }
+
+  const hint = buildNotLoggedInHint(siteId, plugin?.manifest.displayName ?? siteId);
+  return {
+    ...data,
+    notLoggedIn: true,
+    notLoggedInHint: hint,
+  };
+}
+
+function buildNotLoggedInHint(siteId: string, displayName: string): string {
+  if (siteId === 'bilibili') {
+    return '当前未登录哔哩哔哩账号，部分推荐内容已隐藏，请前往账号页扫码登录后重试';
+  }
+  return `当前未登录${displayName}账号，推荐内容依赖登录态，请前往账号页登录后重试`;
+}
+
