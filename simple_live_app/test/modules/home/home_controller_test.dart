@@ -78,7 +78,7 @@ class _FakeLiveApi implements LiveApiService {
       [];
 
   @override
-  LiveDanmaku getDanmaku(String siteId) => LiveDanmaku();
+  LiveDanmaku getDanmaku(String siteId, {String? roomId}) => LiveDanmaku();
 }
 
 Site _site(String id, String name) => Site(

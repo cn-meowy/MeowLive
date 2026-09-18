@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/live_api_factory.dart';
 import 'package:simple_live_app/app/services/sites_service.dart';
 import 'package:simple_live_app/app/sites.dart';
@@ -200,6 +201,16 @@ class AppSettingsController extends GetxController {
   }
 
   void initSiteSort() {
+    // 纯客户端模式（或 iOS 运行时兜底）：站点列表完全由后端驱动，无内置站点兜底。
+    // 仅读取持久化的排序，过滤空串，后续由 SitesService._syncSiteSort 与后端对齐。
+    if (kPureClient || Platform.isIOS) {
+      final raw = LocalStorageService.instance
+          .getValue(LocalStorageService.kSiteSort, "");
+      siteSort.value = raw.isEmpty
+          ? <String>[]
+          : raw.split(",").where((e) => e.isNotEmpty).toList();
+      return;
+    }
     var sort = LocalStorageService.instance
         .getValue(
           LocalStorageService.kSiteSort,

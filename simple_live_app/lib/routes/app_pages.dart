@@ -1,6 +1,9 @@
 // ignore_for_file: prefer_inlined_adds
 
+import 'dart:io' show Platform;
+
 import 'package:get/get.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_controller.dart';
 import 'package:simple_live_app/modules/category/detail/category_detail_page.dart';
 import 'package:simple_live_app/modules/indexed/indexed_controller.dart';
@@ -224,39 +227,44 @@ class AppPages {
       name: RoutePath.kSync,
       page: () => const SyncPage(),
     ),
-    // 本地同步
-    GetPage(
-      name: RoutePath.kLocalSync,
-      page: () => const LocalSyncPage(),
-      bindings: [
-        BindingsBuilder.put(
-          () => LocalSyncController(
-            Get.arguments ?? "",
+    // 局域网同步（UDP + HTTP 本地服务）。纯客户端（编译期）或 iOS（运行时兜底）
+    // 不注册：页面/控制器失去引用后整库被 AOT tree-shake，SyncService 及其
+    // udp/shelf/network_info_plus 依赖不会进入 iOS 二进制。
+    if (!kPureClient && !Platform.isIOS) ...[
+      // 本地同步
+      GetPage(
+        name: RoutePath.kLocalSync,
+        page: () => const LocalSyncPage(),
+        bindings: [
+          BindingsBuilder.put(
+            () => LocalSyncController(
+              Get.arguments ?? "",
+            ),
           ),
-        ),
-      ],
-    ),
-    //扫码
-    GetPage(
-      name: RoutePath.kSyncScan,
-      page: () => const SyncScanQRPage(),
-      bindings: [
-        BindingsBuilder.put(() => SyncScanQRControlelr()),
-      ],
-    ),
-    //同步设备
-    GetPage(
-      name: RoutePath.kLocalSyncDevice,
-      page: () => const SyncDevicePage(),
-      bindings: [
-        BindingsBuilder.put(
-          () => SyncDeviceController(
-            client: Get.arguments['client'],
-            info: Get.arguments['info'],
+        ],
+      ),
+      //扫码
+      GetPage(
+        name: RoutePath.kSyncScan,
+        page: () => const SyncScanQRPage(),
+        bindings: [
+          BindingsBuilder.put(() => SyncScanQRControlelr()),
+        ],
+      ),
+      //同步设备
+      GetPage(
+        name: RoutePath.kLocalSyncDevice,
+        page: () => const SyncDevicePage(),
+        bindings: [
+          BindingsBuilder.put(
+            () => SyncDeviceController(
+              client: Get.arguments['client'],
+              info: Get.arguments['info'],
+            ),
           ),
-        ),
-      ],
-    ),
+        ],
+      ),
+    ],
     //远程同步-房间
     GetPage(
       name: RoutePath.kRemoteSyncRoom,

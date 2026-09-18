@@ -102,7 +102,7 @@ jobs:
       - name: Build IPA
         run: |
           cd simple_live_app
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign --dart-define=PURE_CLIENT=true
 
       #创建未签名ipa
       - name: Create IPA

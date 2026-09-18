@@ -5,6 +5,7 @@ import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/live_api_factory.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/models/account/bilibili_user_info_page.dart';
@@ -59,6 +60,11 @@ class BiliBiliAccountService extends GetxService {
   }
 
   void setSite() {
+    // 纯客户端模式（或 iOS 运行时兜底）不写入内置原生站点实例
+    // （编译期裁剪，账号登录依赖后端）
+    if (kPureClient || Platform.isIOS) {
+      return;
+    }
     // 防御性：异步路径可能在 allSites 未及时初始化时触发
     if (Sites.allSites.isEmpty) {
       Log.logPrint(

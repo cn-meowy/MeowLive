@@ -65,7 +65,7 @@ abstract class LiveApiService {
 
   /// 获取弹幕处理器
   ///
-  /// 始终返回 simple_live_core 的 LiveDanmaku 实例，
-  /// 弹幕连接不走服务端中转。
-  LiveDanmaku getDanmaku(String siteId);
+  /// 完整模式返回 simple_live_core 的 LiveDanmaku 实例（弹幕直连），
+  /// 纯客户端模式返回 [RemoteDanmaku]（走后端 WS 代理，需 [roomId]）。
+  LiveDanmaku getDanmaku(String siteId, {String? roomId});
 }

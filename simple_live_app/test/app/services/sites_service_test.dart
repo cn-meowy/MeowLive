@@ -98,7 +98,7 @@ class _UrlCapturingFake implements LiveApiService {
       [];
 
   @override
-  LiveDanmaku getDanmaku(String siteId) => LiveDanmaku();
+  LiveDanmaku getDanmaku(String siteId, {String? roomId}) => LiveDanmaku();
 }
 
 Future<List<String>> _siteIds(SitesService service) =>

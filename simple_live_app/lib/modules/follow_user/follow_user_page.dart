@@ -156,7 +156,7 @@ class FollowUserPage extends GetView<FollowUserController> {
               showPCRefreshButton: false,
               itemBuilder: (_, i) {
                 var item = controller.list[i];
-                var site = Sites.allSites[item.siteId]!;
+                var site = Sites.lookupOrDefault(item.siteId);
                 return FollowUserItem(
                   item: item,
                   onRemove: () {

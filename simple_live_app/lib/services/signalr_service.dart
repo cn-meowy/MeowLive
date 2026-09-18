@@ -12,8 +12,6 @@ enum SignalRConnectionState {
 }
 
 class SignalRService {
-  static const String kUrl = "https://sync1.nsapps.cn/sync";
-
   SignalRConnectionState state = SignalRConnectionState.connecting;
 
   final _stateStreamController =
@@ -51,8 +49,13 @@ class SignalRService {
       _onRoomUserUpdatedStreamController.stream;
 
   HubConnection? hubConnection;
-  Future<void> connect() async {
-    hubConnection = HubConnectionBuilder().withUrl(kUrl).build();
+
+  /// 连接到指定 SignalR Hub 服务端
+  ///
+  /// [url] 为完整的 SignalR Hub 地址（如 `https://example.com/sync`），
+  /// 由调用方根据用户配置的服务端地址解析，不内置固定服务端。
+  Future<void> connect(String url) async {
+    hubConnection = HubConnectionBuilder().withUrl(url).build();
     hubConnection!.onclose(({Exception? error}) {
       state = SignalRConnectionState.disconnected;
       _stateStreamController.add(state);

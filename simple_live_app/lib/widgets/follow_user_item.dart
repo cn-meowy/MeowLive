@@ -26,7 +26,7 @@ class FollowUserItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var site = Sites.allSites[item.siteId]!;
+    var site = Sites.lookupOrDefault(item.siteId);
     return ListTile(
       contentPadding: AppStyle.edgeInsetsL16.copyWith(right: 4),
       leading: NetImage(

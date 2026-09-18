@@ -112,7 +112,7 @@ class ParseController extends GetxController {
     if (url.contains("bilibili.com")) {
       var regExp = RegExp(r"bilibili\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
-      return [id, Sites.allSites[Constant.kBiliBili]!];
+      return _result(id, Constant.kBiliBili);
     }
 
     if (url.contains("b23.tv")) {
@@ -131,24 +131,24 @@ class ParseController extends GetxController {
       }
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
-      return [id, Sites.allSites[Constant.kDouyu]!];
+      return _result(id, Constant.kDouyu);
     }
     if (url.contains("huya.com")) {
       var regExp = RegExp(r"huya\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
-      return [id, Sites.allSites[Constant.kHuya]!];
+      return _result(id, Constant.kHuya);
     }
     if (url.contains("live.douyin.com")) {
       var regExp = RegExp(r"live\.douyin\.com/([\d|\w]+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
 
-      return [id, Sites.allSites[Constant.kDouyin]!];
+      return _result(id, Constant.kDouyin);
     }
     if (url.contains("webcast.amemv.com")) {
       var regExp = RegExp(r"reflow/(\d+)");
       id = regExp.firstMatch(url)?.group(1) ?? "";
-      return [id, Sites.allSites[Constant.kDouyin]!];
+      return _result(id, Constant.kDouyin);
     }
     if (url.contains("v.douyin.com")) {
       var regExp = RegExp(r"http.?://v.douyin.com/[\d\w]+/");
@@ -158,6 +158,19 @@ class ParseController extends GetxController {
     }
 
     return [];
+  }
+
+  /// 按 siteId 查站点并组装解析结果。
+  ///
+  /// 纯客户端模式下站点来自后端 remoteSites，若不在列表中则提示「站点不可用」，
+  /// 不再强制解引用（避免崩溃）。
+  List<dynamic> _result(String id, String siteId) {
+    final site = Sites.lookup(siteId);
+    if (site == null) {
+      SmartDialog.showToast("站点不可用");
+      return [];
+    }
+    return [id, site];
   }
 
   Future<String> getLocation(String url) async {

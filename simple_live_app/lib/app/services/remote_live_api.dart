@@ -1,11 +1,15 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/requests/http_client.dart';
 import 'package:simple_live_app/core/simple_live_core.dart';
 
 import 'danmaku_data_codec.dart';
 import 'live_api_service.dart';
+import 'remote_danmaku.dart';
 
 /// 远程 LiveApi 实现
 ///
@@ -163,8 +167,12 @@ class RemoteLiveApi implements LiveApiService {
   }
 
   @override
-  LiveDanmaku getDanmaku(String siteId) {
-    // 弹幕始终使用 simple_live_core 的 LiveDanmaku，不走服务端中转
+  LiveDanmaku getDanmaku(String siteId, {String? roomId}) {
+    // 纯客户端模式弹幕走后端 WS 代理（iOS 运行时兜底同样走后端）
+    if (kPureClient || Platform.isIOS) {
+      return RemoteDanmaku(siteId: siteId, roomId: roomId ?? '');
+    }
+    // 完整模式下弹幕使用 simple_live_core 的 LiveDanmaku，不走服务端中转
     final site = Sites.allSites[siteId];
     final liveSite = site?.liveSite;
     if (liveSite != null) {

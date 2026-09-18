@@ -873,7 +873,7 @@ void showFollowUser(LiveRoomController controller) {
                     onTap: () {
                       Utils.hideRightDialog();
                       controller.resetRoom(
-                        Sites.allSites[item.siteId]!,
+                        Sites.lookupOrDefault(item.siteId),
                         item.roomId,
                       );
                     },

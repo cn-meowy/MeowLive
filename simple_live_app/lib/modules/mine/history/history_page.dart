@@ -34,7 +34,7 @@ class HistoryPage extends GetView<HistoryController> {
         firstRefresh: true,
         itemBuilder: (_, i) {
           var item = controller.list[i];
-          var site = Sites.allSites[item.siteId]!;
+          var site = Sites.lookupOrDefault(item.siteId);
           return Dismissible(
             key: ValueKey(item.id),
             direction: DismissDirection.endToStart,

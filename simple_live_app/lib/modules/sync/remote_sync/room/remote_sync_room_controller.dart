@@ -11,6 +11,7 @@ import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/services/live_api_factory.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/history.dart';
@@ -46,7 +47,20 @@ class RemoteSyncRoomController extends BaseController {
 
   void connect() async {
     listenSignalR();
-    await signalR.connect();
+    final syncHubUrl = await _resolveSyncHubUrl();
+    if (syncHubUrl.isEmpty) {
+      SmartDialog.showToast("请先在服务器设置中配置服务端地址");
+      Get.back();
+      return;
+    }
+    try {
+      await signalR.connect(syncHubUrl);
+    } catch (e) {
+      Log.d('SignalR 连接失败: $e');
+      SmartDialog.showToast("同步服务连接失败，请检查服务端地址");
+      Get.back();
+      return;
+    }
     if (signalR.state == SignalRConnectionState.connected) {
       if (roomId.isEmpty) {
         createRoom();
@@ -54,6 +68,15 @@ class RemoteSyncRoomController extends BaseController {
         joinRoom(roomId);
       }
     }
+  }
+
+  /// 由用户配置的服务端地址推导 SignalR Hub 地址（`<baseUrl>/sync`）
+  Future<String> _resolveSyncHubUrl() async {
+    final baseUrl = await LiveApiFactory.resolveBaseUrl();
+    if (baseUrl.isEmpty) return '';
+    final uri = Uri.parse(baseUrl);
+    final host = uri.hasPort ? '${uri.host}:${uri.port}' : uri.host;
+    return '${uri.scheme}://$host/sync';
   }
 
   void createRoom() async {

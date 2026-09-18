@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
+
 import 'package:simple_live_app/app/constant.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/script_site_service.dart';
 import 'package:simple_live_app/app/services/sites_service.dart';
 import 'package:simple_live_app/core/simple_live_core.dart';
@@ -49,12 +52,18 @@ class Sites {
 
   /// 重新构建 [allSites]：内置站点 + 已安装的 JS 站点。
   ///
+  /// 纯客户端模式下 [allSites] 保持为空（内置站点与 JS 站点均被编译期裁剪）。
+  ///
   /// 保留原 [allSites] 中的实例引用（避免重复构造内置站点的 liveSite）。
   /// 应在启动时以及 JS 站点安装/卸载/启停后调用。
   static void reload() {
-    allSites
-      ..clear()
-      ..addAll(_builtinSites);
+    allSites.clear();
+    // 纯客户端（编译期）或 iOS（运行时兜底）保持 allSites 为空：
+    // 内置站点与 JS 站点均不进入（iOS 下连引用都会被 AOT tree-shake）。
+    if (kPureClient || Platform.isIOS) {
+      return;
+    }
+    allSites.addAll(_builtinSites);
 
     // 合并已启用的 JS 站点
     try {
@@ -71,6 +80,35 @@ class Sites {
       // ScriptSiteService 尚未注册时忽略
     }
   }
+
+  /// 统一站点查找：先查 [allSites]（内置/JS），未命中再查后端 [SitesService.remoteSites]。
+  ///
+  /// 找不到返回 null。供 follow/history/解析等按 siteId 反查站点使用的安全入口，
+  /// 纯客户端模式下 [allSites] 为空，依赖 remoteSites 命中。
+  static Site? lookup(String siteId) {
+    final local = allSites[siteId];
+    if (local != null) {
+      return local;
+    }
+    try {
+      for (final s in SitesService.instance.remoteSites) {
+        if (s.id == siteId) {
+          return s;
+        }
+      }
+    } catch (_) {
+      // SitesService 尚未注册时忽略
+    }
+    return null;
+  }
+
+  /// 安全查找站点，找不到时返回空态默认 [Site]（避免崩溃）。
+  static Site lookupOrDefault(String siteId) {
+    return lookup(siteId) ??
+        Site(id: siteId, name: siteId, logo: _defaultLogo);
+  }
+
+  static const String _defaultLogo = 'assets/images/logo.png';
 
   /// 首页/分类/搜索 Tab 展示的站点列表（完全由后端驱动，无本地回退）
   ///

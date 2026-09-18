@@ -9,10 +9,12 @@ import 'package:simple_live_app/app/constant.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/event_bus.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/db/follow_user.dart';
 import 'package:simple_live_app/models/db/follow_user_tag.dart';
 import 'package:simple_live_app/models/db/history.dart';
+import 'package:simple_live_app/models/sync_client_model.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
 import 'package:udp/udp.dart';
@@ -39,6 +41,11 @@ class SyncService extends GetxService {
 
   @override
   void onInit() {
+    // 纯客户端（编译期裁剪）或 iOS（运行时兜底）：绝不启动局域网 UDP/HTTP
+    // 本地服务（端口绑定会触发 iOS 本地网络权限弹窗）。
+    if (kPureClient || Platform.isIOS) {
+      return;
+    }
     Log.d('TVService init');
     deviceId = (const Uuid().v4()).split('-').first;
     listenUDP();
@@ -407,19 +414,4 @@ class SyncService extends GetxService {
     server?.close(force: true);
     super.onClose();
   }
-}
-
-class SyncClinet {
-  final String id;
-  final String name;
-  final String address;
-  final int port;
-  final String type;
-  SyncClinet({
-    required this.id,
-    required this.name,
-    required this.address,
-    required this.port,
-    required this.type,
-  });
 }

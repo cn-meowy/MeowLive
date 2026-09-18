@@ -101,6 +101,22 @@ flutter pub get
 flutter run
 ```
 
+> **iOS 纯客户端模式**：iOS 构建通过 `--dart-define=PURE_CLIENT=true` 以编译期裁剪内置服务
+> （`EmbeddedLiveServer`）、内置站点与 JS 站点，变成纯客户端（只连远程后端，弹幕走后端 WS 代理），
+> 避免 App Store 因「开箱即提供第三方直播内容」被拒。
+>
+> - `PURE_CLIENT=true` 已内置进 Xcode 工程（`DART_DEFINES`，Debug/Release/Profile 均生效），
+>   直接用 Xcode 构建/归档即为纯客户端；CI 另行显式传入，二者结果一致。
+> - 代码层有运行时兜底：即使个别构建未注入该定义，iOS 上也不会启动内嵌服务、不拼接端口、
+>   不加载内置/JS 站点，且 Info.plist 已移除 `NSLocalNetworkUsageDescription`，
+>   不会触发本地网络权限弹窗。
+>
+> ```bash
+> flutter build ios --release --no-codesign --dart-define=PURE_CLIENT=true
+> ```
+>
+> Android / 桌面构建**不要**传该参数（保留完整能力）。
+
 各子模块的详细构建/部署指引见各自目录下的 README。
 
 ## 环境

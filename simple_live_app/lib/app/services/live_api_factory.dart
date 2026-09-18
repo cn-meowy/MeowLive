@@ -1,9 +1,12 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/embedded_live_server.dart';
 import 'package:simple_live_app/app/services/live_api_service.dart';
+import 'package:simple_live_app/app/services/remote_danmaku.dart';
 import 'package:simple_live_app/app/services/remote_live_api.dart';
 import 'package:simple_live_app/app/sites.dart';
 import 'package:simple_live_app/app/utils/local_ip_util.dart';
@@ -107,6 +110,17 @@ class LiveApiFactory {
       settings.embeddedServerStatus.value = 'disabled';
       _resolvedBaseUrl = null;
       throw StateError('未配置服务端地址');
+    }
+
+    // 纯客户端模式（编译期裁剪）或 iOS（运行时兜底，即使未注入 PURE_CLIENT）
+    // 永不启动内嵌服务，一律作为远程后端连接。
+    // 无可用后端时仅标记 remote:fail，由上层 API 调用失败兜底，不 fallback 内嵌服务。
+    if (kPureClient || Platform.isIOS) {
+      settings.embeddedServerStatus.value = 'remote:checking';
+      _resolvedBaseUrl = serverUrl;
+      Log.d('[LiveApiFactory] 纯客户端模式，直接连接 remote backend: $serverUrl');
+      _checkRemoteAvailable(serverUrl);
+      return RemoteLiveApi(serverUrl);
     }
 
     final isLocal = await LocalIpUtil.isLocalHost(serverUrl);
@@ -236,12 +250,16 @@ class LiveApiFactory {
 
   /// 获取弹幕处理器（同步）
   ///
-  /// 弹幕始终直连 core（[Sites.allSites]），不走服务端中转，
-  /// 故不依赖内嵌服务是否就绪。
+  /// 完整模式下弹幕直连 core（[Sites.allSites]），不走服务端中转。
+  /// 纯客户端模式（或 iOS 运行时兜底）下返回 [RemoteDanmaku]（走后端 WS
+  /// 代理），需提供 [roomId]。
   ///
   /// 未知平台（含服务端 demo 模式的虚拟平台、未注册的 JS 站点等）
   /// 返回默认 no-op [LiveDanmaku]，避免崩溃阻断直播间构建。
-  static LiveDanmaku getDanmaku(String siteId) {
+  static LiveDanmaku getDanmaku(String siteId, {String? roomId}) {
+    if (kPureClient || Platform.isIOS) {
+      return RemoteDanmaku(siteId: siteId, roomId: roomId ?? '');
+    }
     final site = Sites.allSites[siteId];
     final liveSite = site?.liveSite;
     if (liveSite != null) {

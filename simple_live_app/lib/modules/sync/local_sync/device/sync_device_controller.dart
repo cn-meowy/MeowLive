@@ -6,10 +6,10 @@ import 'package:simple_live_app/app/controller/base_controller.dart';
 import 'package:simple_live_app/app/log.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/models/sync_client_info_model.dart';
+import 'package:simple_live_app/models/sync_client_model.dart';
 import 'package:simple_live_app/requests/sync_client_request.dart';
 import 'package:simple_live_app/services/bilibili_account_service.dart';
 import 'package:simple_live_app/services/db_service.dart';
-import 'package:simple_live_app/services/sync_service.dart';
 
 class SyncDeviceController extends BaseController {
   final SyncClinet client;

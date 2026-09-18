@@ -745,7 +745,7 @@ class LiveRoomPage extends GetView<LiveRoomController> {
                         controller.rxRoomId.value == item.roomId,
                     onTap: () {
                       controller.resetRoom(
-                        Sites.allSites[item.siteId]!,
+                        Sites.lookupOrDefault(item.siteId),
                         item.roomId,
                       );
                     },

@@ -64,7 +64,7 @@
       'footer.copy': '© 2026 MeowLive · 基于 xiaoyaocz/dart_simple_live fork',
 
       'privacy.title': 'MeowLive 隐私政策',
-      'privacy.meta': '生效日期：2026年8月6日',
+      'privacy.meta': '生效日期：2026年9月18日',
 
       'agreement.title': 'MeowLive 用户协议',
       'agreement.meta': '生效日期：2026年8月6日',
@@ -130,7 +130,7 @@
       'footer.copy': '© 2026 MeowLive · A fork of xiaoyaocz/dart_simple_live',
 
       'privacy.title': 'MeowLive Privacy Policy',
-      'privacy.meta': 'Effective Date: August 6, 2026',
+      'privacy.meta': 'Effective Date: September 18, 2026',
 
       'agreement.title': 'MeowLive Terms of Use',
       'agreement.meta': 'Effective Date: August 6, 2026',

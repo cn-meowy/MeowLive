@@ -1,9 +1,12 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:get/get.dart';
 import 'package:remixicon/remixicon.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/live_api_factory.dart';
 import 'package:simple_live_app/app/utils.dart';
 import 'package:simple_live_app/app/utils/embedded_server_url_resolver.dart';
@@ -222,7 +225,11 @@ class _ServerSyncPageState extends State<ServerSyncPage> {
 
     // 本机地址 + 未指定端口 + 内嵌服务已启动：用实际 baseUrl（含端口）
     // 替换，避免 URL 端口缺失/不匹配导致测试失败。
-    final resolved = await EmbeddedServerUrlResolver.resolve(url);
+    // 纯客户端（编译期）或 iOS（运行时兜底）无内嵌服务，直接跳过：
+    // 编译期常量折叠使 EmbeddedServerUrlResolver 引用进入死分支，不进 iOS 二进制。
+    final resolved = (kPureClient || Platform.isIOS)
+        ? url
+        : await EmbeddedServerUrlResolver.resolve(url);
     if (resolved != _urlController.text) {
       _urlController.text = resolved;
     }

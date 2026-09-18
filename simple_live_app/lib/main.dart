@@ -15,6 +15,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:simple_live_app/app/app_style.dart';
 import 'package:simple_live_app/app/controller/app_settings_controller.dart';
 import 'package:simple_live_app/app/log.dart';
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/script_site_service.dart';
 import 'package:simple_live_app/app/services/embedded_live_server.dart';
 import 'package:simple_live_app/app/services/sites_service.dart';
@@ -63,7 +64,10 @@ void main() async {
   runApp(const MyApp());
 
   // app 退出时关闭内嵌直播服务，避免 HttpServer 泄漏
-  _EmbeddedServerLifecycleObserver();
+  // 纯客户端（编译期）或 iOS（运行时兜底）无内嵌服务，不注册观察者
+  if (!kPureClient && !Platform.isIOS) {
+    _EmbeddedServerLifecycleObserver();
+  }
 }
 
 /// 将Hive数据迁移到Application Support
@@ -124,8 +128,11 @@ Future initWindow() async {
 }
 
 Future initServices() async {
-  // 先构建内置站点注册表，避免依赖 ScriptSiteService 的注册时序
-  Sites.reload();
+  // 先构建内置站点注册表，避免依赖 ScriptSiteService 的注册时序。
+  // 纯客户端模式下不构建内置站点（编译期裁剪）；iOS 运行时兜底同样跳过。
+  if (!kPureClient && !Platform.isIOS) {
+    Sites.reload();
+  }
   Hive.registerAdapter(FollowUserAdapter());
   Hive.registerAdapter(HistoryAdapter());
   Hive.registerAdapter(FollowUserTagAdapter());
@@ -136,8 +143,11 @@ Future initServices() async {
   Log.d("Init LocalStorage Service");
   await Get.put(LocalStorageService()).init();
   await Get.put(DBService()).init();
-  //JS 站点服务需在设置控制器前初始化，以便 Settings 初始化站点排序时已包含 JS 站点
-  Get.put(ScriptSiteService());
+  //JS 站点服务需在设置控制器前初始化，以便 Settings 初始化站点排序时已包含 JS 站点。
+  // 纯客户端模式下不注册 JS 站点服务（编译期裁剪）；iOS 运行时兜底同样跳过。
+  if (!kPureClient && !Platform.isIOS) {
+    Get.put(ScriptSiteService());
+  }
   //初始化设置控制器
   Get.put(AppSettingsController());
 

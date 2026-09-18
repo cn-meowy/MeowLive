@@ -40,7 +40,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
   }) {
     rxSite = pSite.obs;
     rxRoomId = pRoomId.obs;
-    liveDanmaku = LiveApiFactory.getDanmaku(site.id);
+    liveDanmaku = LiveApiFactory.getDanmaku(site.id, roomId: pRoomId);
     // 抖音应该默认是竖屏的
     if (site.id == "douyin") {
       isVertical.value = true;
@@ -857,7 +857,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
                       onTap: () {
                         Get.back();
                         resetRoom(
-                          Sites.allSites[item.siteId]!,
+                          Sites.lookupOrDefault(item.siteId),
                           item.roomId,
                         );
                       },
@@ -1006,7 +1006,7 @@ class LiveRoomController extends PlayerController with WidgetsBindingObserver {
     danmakuController?.clear();
 
     // 重新设置LiveDanmaku
-    liveDanmaku = LiveApiFactory.getDanmaku(site.id);
+    liveDanmaku = LiveApiFactory.getDanmaku(site.id, roomId: roomId);
 
     // 停止播放
     await player.stop();

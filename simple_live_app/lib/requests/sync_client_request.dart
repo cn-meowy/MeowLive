@@ -1,6 +1,6 @@
 import 'package:simple_live_app/models/sync_client_info_model.dart';
+import 'package:simple_live_app/models/sync_client_model.dart';
 import 'package:simple_live_app/requests/http_client.dart';
-import 'package:simple_live_app/services/sync_service.dart';
 
 class SyncClientRequest {
   Future<SyncClientInfoModel> getClientInfo(SyncClinet client) async {

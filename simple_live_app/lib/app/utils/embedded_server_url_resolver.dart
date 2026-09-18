@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:simple_live_app/app/pure_client_config.dart';
 import 'package:simple_live_app/app/services/embedded_live_server.dart';
 import 'package:simple_live_app/app/utils/local_ip_util.dart';
 import 'package:simple_live_app/app/utils/server_url_util.dart';
@@ -22,6 +25,11 @@ class EmbeddedServerUrlResolver {
 
   static Future<String> resolve(String input) async {
     if (input.isEmpty) return input;
+
+    // 纯客户端模式无内嵌服务，原样返回（编译期裁剪：AOT 下该守卫常量折叠，
+    // 后续 EmbeddedLiveServer / LocalIpUtil 引用进入死分支被 tree-shake）。
+    // iOS 运行时兜底：即使构建未注入 PURE_CLIENT，也绝不拼接端口。
+    if (kPureClient || Platform.isIOS) return input;
 
     Uri uri;
     try {
